@@ -127,10 +127,10 @@ services:
     environment:
       - SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL=zookeeper-debezium:2182
       - SCHEMA_REGISTRY_HOST_NAME=schema-registry
-      - SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8080,http://localhost:8080
+      - SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8081,http://localhost:8081
       - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://broker-debezium:29094
     ports:
-      - 8080:8080
+      - 8081:8081
     depends_on: 
       - zookeeper-debezium
       - broker-debezium
@@ -161,6 +161,69 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - pipeline-networks
+
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    networks:
+      - pipeline-networks
+
+  
+  spark-worker1:
+    image: bitnami/spark:latest
+    container_name: spark-worker1
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+    networks:
+      - pipeline-networks
+
+  spark-worker2:
+    image: bitnami/spark:latest
+    container_name: spark-worker2
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+    networks:
+      - pipeline-networks
+
+  spark-worker3:
+    image: bitnami/spark:latest
+    container_name: spark-worker3
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+    networks:
+      - pipeline-networks
+
+
+  pyspark-job:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pyspark
+    container_name: pyspark-job
+    environment:
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - broker-debezium
+      - spark-master
+      - schema-registry
+    volumes:
+      - ./pyspark_job.py:/opt/spark/examples/src/main/python/pyspark_job.py
     networks:
       - pipeline-networks
 

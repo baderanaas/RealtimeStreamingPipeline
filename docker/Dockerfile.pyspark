@@ -1,0 +1,39 @@
+# Use the Bitnami Spark base image
+FROM bitnami/spark:latest
+
+# Install curl and dependencies
+USER root
+RUN apt-get update && \
+    apt-get install -y curl && \
+    apt-get clean
+
+# Set Spark master URL (adjust as needed)
+ENV SPARK_MASTER_URL=spark://spark-master:7077
+
+# Set the work directory inside the container
+WORKDIR /opt/spark
+
+# Download Snowflake JARs (ensure the version matches your Spark version)
+RUN mkdir -p /opt/spark/jars
+
+
+RUN curl -o /opt/spark/jars/spark-streaming-kafka-0-10_2.12-3.4.0.jar \
+    https://repo1.maven.org/maven2/org/apache/spark/spark-streaming-kafka-0-10_2.12/3.4.0/spark-streaming-kafka-0-10_2.12-3.4.0.jar && \
+    curl -o /opt/spark/jars/spark-sql-kafka-0-10_2.12-3.4.0.jar \
+    https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.4.0/spark-sql-kafka-0-10_2.12-3.4.0.jar && \
+    curl -o /opt/spark/jars/kafka-clients-7.4.0.jar \
+    https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/7.4.0/kafka-clients-7.4.0.jar
+
+
+# Set PySpark submit arguments as an environment variable
+ENV PYSPARK_SUBMIT_ARGS="--packages org.apache.spark:spark-streaming-kafka-0-10_2.12:3.4.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0 pyspark-shell"
+
+# Copy application files into the container
+COPY requirements.txt /opt/spark/requirements.txt
+COPY pyspark_job.py /opt/spark/src/main/python/pyspark_job.py
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r /opt/spark/requirements.txt
+
+# Set the default command to run the PySpark job
+CMD ["python", "/opt/spark/src/main/python/pyspark_job.py"]
