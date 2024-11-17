@@ -13,10 +13,9 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.jdbc.JdbcSink;
 
-import java.util.concurrent.TimeUnit;
 
 public class DataStreamJob {
-	private static final String jdbcUrl = "jdbc:postgresql://localhost:5432/appointments";
+	private static final String jdbcUrl = "jdbc:postgresql://localhost:6543/appointments";
 	private static final String username = "postgres";
 	private static final String password = "admin";
 

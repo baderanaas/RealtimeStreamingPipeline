@@ -1,0 +1,15 @@
+{
+  "name": "appointments-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "topic.prefix": "cdc",
+    "tasks.max": "1",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "admin",
+    "database.dbname": "appointments",
+    "table.whitelist": "public.appointments",
+    "plugin.name": "pgoutput"
+  }
+}

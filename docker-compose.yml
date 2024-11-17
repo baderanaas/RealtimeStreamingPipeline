@@ -15,6 +15,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - pipeline-networks
 
   broker-flink:
     image: confluentinc/cp-kafka:7.4.0
@@ -44,18 +46,124 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - pipeline-networks
 
   postgres:
     image: postgres:latest
     container_name: postgres
     ports:
-      - "5432:5432"
+      - "6543:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: appointments
+    command: [
+      "postgres",
+      "-c", "wal_level=logical",
+      "-c", "max_replication_slots=4",
+      "-c", "max_wal_senders=4",
+      "-c", "max_connections=200"
+    ]
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - pipeline-networks
+
+
+  zookeeper-debezium:
+    image: confluentinc/cp-zookeeper:7.4.0
+    hostname: zookeeper-debezium
+    container_name: zookeeper-debezium
+    ports:
+      - "2182:2182"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2182
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "echo 'ruok' | nc localhost 2182" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pipeline-networks
+
+  broker-debezium:
+    image: confluentinc/cp-kafka:7.4.0
+    hostname: broker-debezium
+    container_name: broker-debezium
+    depends_on:
+      zookeeper-debezium:
+        condition: service_healthy
+    ports:
+      - "9094:9094"
+      - "9103:9103"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper-debezium:2182'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-debezium:29094,PLAINTEXT_HOST://localhost:9094
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+    healthcheck:
+      test: [ "CMD", "bash", "-c", 'nc -z localhost 9094' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pipeline-networks
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.4.0
+    environment:
+      - SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL=zookeeper-debezium:2182
+      - SCHEMA_REGISTRY_HOST_NAME=schema-registry
+      - SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8080,http://localhost:8080
+      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://broker-debezium:29094
+    ports:
+      - 8080:8080
+    depends_on: 
+      - zookeeper-debezium
+      - broker-debezium
+    networks:
+      - pipeline-networks
+
+  debezium:
+    image: debezium/connect:2.3
+    environment:
+      BOOTSTRAP_SERVERS: broker-debezium:29094
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: connect_configs
+      OFFSET_STORAGE_TOPIC: connect_offsets
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false" 
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false" 
+      CONNECT_REST_PORT: 8083
+      CONNECT_REST_ADVERTISED_HOST_NAME: debezium
+    depends_on:
+      broker-debezium:
+        condition: service_healthy
+    ports:
+      - 8083:8083
+    healthcheck:
+      test: [ 'CMD', 'curl', '--silent', '--fail', '-X', 'GET', 'http://localhost:8083/connectors' ]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pipeline-networks
+
+networks:
+  pipeline-networks:
+    driver: bridge
