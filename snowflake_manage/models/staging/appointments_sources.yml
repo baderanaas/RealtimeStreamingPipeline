@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: appointments_sources
+    database: PIPE_DB
+    schema: PIPE_SCHEMA
+    tables:
+      - name: all_appointments
+        columns:
+          - name: appointment_id
+            description: "Unique identifier for the appointment"
+            tests:
+              - unique
+              - not_null

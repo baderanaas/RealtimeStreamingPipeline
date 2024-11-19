@@ -212,21 +212,21 @@ services:
       - pipeline-networks
 
 
-  pyspark-job:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.pyspark
-    container_name: pyspark-job
-    environment:
-      - SPARK_MASTER_URL=spark://spark-master:7077
-    depends_on:
-      - broker-debezium
-      - spark-master
-      - schema-registry
-    volumes:
-      - ./pyspark_job.py:/opt/spark/examples/src/main/python/pyspark_job.py
-    networks:
-      - pipeline-networks
+  # pyspark-job:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/Dockerfile.pyspark
+  #   container_name: pyspark-job
+  #   environment:
+  #     - SPARK_MASTER_URL=spark://spark-master:7077
+  #   depends_on:
+  #     - broker-debezium
+  #     - spark-master
+  #     - schema-registry
+  #   volumes:
+  #     - ./pyspark_job.py:/opt/spark/examples/src/main/python/pyspark_job.py
+  #   networks:
+  #     - pipeline-networks
 
 networks:
   pipeline-networks:
