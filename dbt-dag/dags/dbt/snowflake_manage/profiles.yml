@@ -1,0 +1,12 @@
+snowflake_manage:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: de17043.europe-west3.gcp
+      user: baderanas
+      password: SnowInTheWinter159
+      role: manager
+      database: PIPE_DB
+      warehouse: PIPE_WH
+      schema: PIPE_SCHEMA
