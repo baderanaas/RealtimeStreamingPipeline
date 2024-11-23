@@ -1,50 +1,48 @@
 # Use the Bitnami Spark base image
-FROM bitnami/spark:3.2.0
+FROM bitnami/spark:3.1.2
 
-# Install curl and dependencies
+# Switch to root to install dependencies
 USER root
+
+# Install curl and other dependencies
 RUN apt-get update && \
-    apt-get install -y curl && \
+    apt-get install -y \
+    python3-pip \
+    curl && \
     apt-get clean
 
-# Set Spark master URL (adjust as needed)
+# Set Spark and Kafka environment variables
 ENV SPARK_MASTER_URL=spark://spark-master:7077
+ENV KAFKA_BROKER=localhost:9094
 
-# Set the work directory inside the container
+# Set the working directory inside the container
 WORKDIR /opt/spark
 
-# Download Snowflake JARs (ensure the version matches your Spark version)
-RUN mkdir -p /opt/spark/jars
+# Create necessary directories for Python job
+RUN mkdir -p /opt/spark/jars /opt/spark/src/main/python
 
-
-RUN curl -o /opt/spark/jars/spark-streaming-kafka-0-10_2.12-3.2.0.jar \
-    https://repo1.maven.org/maven2/org/apache/spark/spark-streaming-kafka-0-10_2.12/3.2.0/spark-streaming-kafka-0-10_2.12-3.2.0.jar && \
-    curl -o /opt/spark/jars/spark-sql-kafka-0-10_2.12-3.2.0.jar \
-    https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.2.0/spark-sql-kafka-0-10_2.12-3.2.0.jar && \
+# Download required dependencies (Kafka and Spark Streaming)
+RUN curl -o /opt/spark/jars/spark-streaming-kafka-0-10_2.12-3.1.2.jar \
+    https://repo1.maven.org/maven2/org/apache/spark/spark-streaming-kafka-0-10_2.12/3.1.2/spark-streaming-kafka-0-10_2.12-3.1.2.jar && \
+    curl -o /opt/spark/jars/spark-sql-kafka-0-10_2.12-3.1.2.jar \
+    https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.1.2/spark-sql-kafka-0-10_2.12-3.1.2.jar && \
     curl -o /opt/spark/jars/kafka-clients-7.4.0.jar \
     https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/7.4.0/kafka-clients-7.4.0.jar
 
+# Set PySpark submit arguments to include required Spark-Kafka packages
+ENV PYSPARK_SUBMIT_ARGS="--packages org.apache.spark:spark-streaming-kafka-0-10_2.12:3.1.2,org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 pyspark-shell"
 
-# RUN curl -o /opt/spark/jars/snowflake-jdbc-3.13.14.jar \
-#     https://repo1.maven.org/maven2/net/snowflake/snowflake-jdbc/3.13.14/snowflake-jdbc-3.13.14.jar && \
-#     curl -o /opt/spark/jars/spark-snowflake_2.12-2.10.0-spark_3.2.jar \
-#     https://repo1.maven.org/maven2/net/snowflake/spark-snowflake_2.12/2.10.0-spark_3.2/spark-snowflake_2.12-2.10.0-spark_3.2.jar
-
-
-# Set PySpark submit arguments as an environment variable
-ENV PYSPARK_SUBMIT_ARGS="--packages org.apache.spark:spark-streaming-kafka-0-10_2.12:3.2.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0 pyspark-shell"
-# ENV PYSPARK_SUBMIT_ARGS="--packages net.snowflake:spark-snowflake_2.12:2.10.0-spark_3.2,net.snowflake:snowflake-jdbc:3.13.14,org.apache.spark:spark-streaming-kafka-0-10_2.12:3.2.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0 pyspark-shell"
-
-# Copy application files into the container
+# Copy the requirements.txt to install Python dependencies
 COPY requirements.txt /opt/spark/requirements.txt
+
+# Copy your PySpark job script to the container
 COPY pyspark_job.py /opt/spark/src/main/python/pyspark_job.py
-COPY ../.env /opt/spark/.env
 
-# COPY ../private_key.pem /opt/spark/private_key.pem
-# COPY ../public_key.pem /opt/spark/public_key.pem
+# Install Python dependencies from the requirements.txt file
+RUN pip3 install -r /opt/spark/requirements.txt
 
-# Install Python dependencies
-RUN pip install -r /opt/spark/requirements.txt
+# Expose Spark UI for debugging (optional)
+EXPOSE 4040
 
-# Set the default command to run the PySpark job
-CMD ["python", "/opt/spark/src/main/python/pyspark_job.py"]
+# Set the entrypoint to run the PySpark job script
+CMD ["python3", "/opt/spark/src/main/python/pyspark_job.py"]

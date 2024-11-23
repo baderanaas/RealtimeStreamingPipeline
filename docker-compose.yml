@@ -105,7 +105,9 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper-debezium:2182'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-debezium:29094,PLAINTEXT_HOST://localhost:9094
+      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-debezium:29094,PLAINTEXT_HOST://localhost:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-debezium:9094
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9094
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
@@ -165,13 +167,13 @@ services:
       - pipeline-networks
 
   spark-master:
-    image: bitnami/spark:3.2.0
+    image: bitnami/spark:3.1.2
     container_name: spark-master
     environment:
       - SPARK_MODE=master
       - SPARK_MASTER_URL=spark://spark-master:7077
     ports:
-      - "8080:8080"
+      - "9090:8080"
       - "7077:7077"
     networks:
       - pipeline-networks
@@ -179,7 +181,7 @@ services:
 
   
   spark-worker1:
-    image: bitnami/spark:3.2.0
+    image: bitnami/spark:3.1.2
     container_name: spark-worker1
     environment:
       - SPARK_MODE=worker
@@ -190,7 +192,7 @@ services:
       - pipeline-networks
 
   spark-worker2:
-    image: bitnami/spark:3.2.0
+    image: bitnami/spark:3.1.2
     container_name: spark-worker2
     environment:
       - SPARK_MODE=worker
@@ -201,7 +203,7 @@ services:
       - pipeline-networks
 
   spark-worker3:
-    image: bitnami/spark:3.2.0
+    image: bitnami/spark:3.1.2
     container_name: spark-worker3
     environment:
       - SPARK_MODE=worker
@@ -212,21 +214,20 @@ services:
       - pipeline-networks
 
 
-  # pyspark-job:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/Dockerfile.pyspark
-  #   container_name: pyspark-job
-  #   environment:
-  #     - SPARK_MASTER_URL=spark://spark-master:7077
-  #   depends_on:
-  #     - broker-debezium
-  #     - spark-master
-  #     - schema-registry
-  #   volumes:
-  #     - ./pyspark_job.py:/opt/spark/examples/src/main/python/pyspark_job.py
-  #   networks:
-  #     - pipeline-networks
+  pyspark-job:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pyspark
+    container_name: pyspark-job
+    environment:
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - KAFKA_BROKER=broker-debezium:9094
+    depends_on:
+      - broker-debezium
+      - spark-master
+      - schema-registry
+    networks:
+      - pipeline-networks
 
 networks:
   pipeline-networks:
