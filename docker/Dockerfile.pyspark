@@ -1,27 +1,47 @@
-# Use the Bitnami Spark base image
 FROM bitnami/spark:3.1.2
 
-# Switch to root to install dependencies
 USER root
 
-# Install curl and other dependencies
 RUN apt-get update && \
     apt-get install -y \
-    python3-pip \
-    curl && \
+    curl \
+    wget \
+    gnupg \
+    build-essential \
+    zlib1g-dev \
+    libncurses5-dev \
+    libgdbm-dev \
+    libnss3-dev \
+    libssl-dev \
+    libreadline-dev \
+    libffi-dev \
+    libsqlite3-dev \
+    libbz2-dev && \
     apt-get clean
 
-# Set Spark and Kafka environment variables
+RUN wget https://www.python.org/ftp/python/3.9.18/Python-3.9.18.tgz && \
+    tar -xf Python-3.9.18.tgz && \
+    cd Python-3.9.18 && \
+    ./configure --enable-optimizations && \
+    make -j $(nproc) && \
+    make altinstall && \
+    cd .. && \
+    rm -rf Python-3.9.18 Python-3.9.18.tgz
+
+RUN ln -sf /usr/local/bin/python3.9 /usr/local/bin/python3 && \
+    ln -sf /usr/local/bin/python3.9 /usr/local/bin/python && \
+    ln -sf /usr/local/bin/pip3.9 /usr/local/bin/pip3 && \
+    ln -sf /usr/local/bin/pip3.9 /usr/local/bin/pip
+
+RUN python --version && python3 --version
+
 ENV SPARK_MASTER_URL=spark://spark-master:7077
 ENV KAFKA_BROKER=localhost:9094
 
-# Set the working directory inside the container
 WORKDIR /opt/spark
 
-# Create necessary directories for Python job
 RUN mkdir -p /opt/spark/jars /opt/spark/src/main/python
 
-# Download required dependencies (Kafka and Spark Streaming)
 RUN curl -o /opt/spark/jars/spark-streaming-kafka-0-10_2.12-3.1.2.jar \
     https://repo1.maven.org/maven2/org/apache/spark/spark-streaming-kafka-0-10_2.12/3.1.2/spark-streaming-kafka-0-10_2.12-3.1.2.jar && \
     curl -o /opt/spark/jars/spark-sql-kafka-0-10_2.12-3.1.2.jar \
@@ -29,20 +49,16 @@ RUN curl -o /opt/spark/jars/spark-streaming-kafka-0-10_2.12-3.1.2.jar \
     curl -o /opt/spark/jars/kafka-clients-7.4.0.jar \
     https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/7.4.0/kafka-clients-7.4.0.jar
 
-# Set PySpark submit arguments to include required Spark-Kafka packages
 ENV PYSPARK_SUBMIT_ARGS="--packages org.apache.spark:spark-streaming-kafka-0-10_2.12:3.1.2,org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 pyspark-shell"
 
-# Copy the requirements.txt to install Python dependencies
 COPY requirements.txt /opt/spark/requirements.txt
 
-# Copy your PySpark job script to the container
+RUN python3.9 -m pip install --no-cache-dir -r /opt/spark/requirements.txt
+
 COPY pyspark_job.py /opt/spark/src/main/python/pyspark_job.py
 
-# Install Python dependencies from the requirements.txt file
-RUN pip3 install -r /opt/spark/requirements.txt
+COPY .env /opt/spark/.env
 
-# Expose Spark UI for debugging (optional)
 EXPOSE 4040
 
-# Set the entrypoint to run the PySpark job script
-CMD ["python3", "/opt/spark/src/main/python/pyspark_job.py"]
+CMD ["python3.9", "/opt/spark/src/main/python/pyspark_job.py"]

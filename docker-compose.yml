@@ -105,7 +105,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper-debezium:2182'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-debezium:29094,PLAINTEXT_HOST://localhost:9094
+      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-debezium:9094,PLAINTEXT_HOST://localhost:9094
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-debezium:9094
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9094
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -130,7 +130,7 @@ services:
       - SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL=zookeeper-debezium:2182
       - SCHEMA_REGISTRY_HOST_NAME=schema-registry
       - SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8081,http://localhost:8081
-      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://broker-debezium:29094
+      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://broker-debezium:9094
     ports:
       - 8081:8081
     depends_on: 
@@ -142,7 +142,7 @@ services:
   debezium:
     image: debezium/connect:2.3
     environment:
-      BOOTSTRAP_SERVERS: broker-debezium:29094
+      BOOTSTRAP_SERVERS: broker-debezium:9094
       GROUP_ID: 1
       CONFIG_STORAGE_TOPIC: connect_configs
       OFFSET_STORAGE_TOPIC: connect_offsets
