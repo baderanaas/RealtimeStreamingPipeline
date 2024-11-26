@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: get_all_appointments
+    database: PIPE_DB
+    schema: PIPE_SCHEMA1
+    tables:
+      - name: ALL_APPOINTMENTS
+        columns:
+          - name: appointment_id
+            type: uuid
+          - name: patient_id
+            type: string
+          - name: patient_name
+            type: string
+          - name: gender
+            type: string
+          - name: age
+            type: integer
+          - name: address
+            type: string
+          - name: symptoms
+            type: array
+          - name: diagnosis
+            type: string
+          - name: treatmentPlan
+            type: string

@@ -6,6 +6,7 @@ __pycache__/
 # C extensions
 *.so
 *.pem
+profiles.yml
 
 # Distribution / packaging
 .Python
