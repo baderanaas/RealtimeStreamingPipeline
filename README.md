@@ -1,7 +1,3 @@
-Here’s an improved version of your README file with polished wording, additional details, and better structure:
-
----
-
 # Realtime Doctor Appointments Streaming Pipeline  
 
 ## Overview  
